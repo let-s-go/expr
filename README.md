@@ -42,7 +42,7 @@ go get -u github.com/antonmedv/expr
 
 ## Documentation
 
-* See [godoc.org/github.com/antonmedv/expr](https://godoc.org/github.com/antonmedv/expr) for developer documentation,
+* See [![GoDoc](https://godoc.org/github.com/antonmedv/expr?status.svg)](https://godoc.org/github.com/antonmedv/expr) for developer documentation,
 * See [The Expression Syntax](https://github.com/antonmedv/expr/wiki/The-Expression-Syntax) page to learn the syntax of the Expr expressions.
 
 ## License
