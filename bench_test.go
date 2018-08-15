@@ -3,7 +3,7 @@ package expr_test
 import (
 	"testing"
 
-	"github.com/antonmedv/expr"
+	"github.com/let-s-go/expr"
 	"github.com/dop251/goja"
 	"github.com/robertkrimen/otto"
 )

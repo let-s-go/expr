@@ -60,10 +60,11 @@ func (n unaryNode) Eval(env interface{}) (interface{}, error) {
 
 	switch n.operator {
 	case "not", "!":
-		if !isBool(val) {
+		b, ok := toBool(val)
+		if !ok {
 			return nil, fmt.Errorf("negation of non-bool type %T", val)
 		}
-		return !toBool(val), nil
+		return !b, nil
 	}
 
 	v, err := cast(val)
@@ -88,11 +89,11 @@ func (n binaryNode) Eval(env interface{}) (interface{}, error) {
 
 	switch n.operator {
 	case "or", "||":
-		if !isBool(left) {
+		b, ok := toBool(left)
+		if !ok {
 			return nil, fmt.Errorf("non-bool value in cond (%T)", left)
 		}
-
-		if toBool(left) {
+		if b {
 			return true, nil
 		}
 
@@ -100,26 +101,27 @@ func (n binaryNode) Eval(env interface{}) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		if !isBool(right) {
+		b, ok = toBool(right)
+		if !ok {
 			return nil, fmt.Errorf("non-bool value in cond (%T)", right)
 		}
-
-		return toBool(right), nil
+		return b, nil
 
 	case "and", "&&":
-		if !isBool(left) {
+		b, ok := toBool(left)
+		if !ok {
 			return nil, fmt.Errorf("non-bool value in cond (%T)", left)
 		}
-
-		if toBool(left) {
+		if b {
 			right, err := n.right.Eval(env)
 			if err != nil {
 				return nil, err
 			}
-			if !isBool(right) {
+			b, ok = toBool(right)
+			if !ok {
 				return nil, fmt.Errorf("non-bool value in cond (%T)", right)
 			}
-			return toBool(right), nil
+			return b, nil
 		}
 
 		return false, nil
@@ -283,7 +285,7 @@ func (n indexNode) Eval(env interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return extract(v, p)
+	return extractIt(v, p)
 }
 
 func (n methodNode) Eval(env interface{}) (interface{}, error) {
@@ -337,11 +339,12 @@ func (n conditionalNode) Eval(env interface{}) (interface{}, error) {
 	}
 
 	// If
-	if !isBool(cond) {
+	b, ok := toBool(cond)
+	if !ok {
 		return nil, fmt.Errorf("non-bool value used in cond (%T)", cond)
 	}
 	// Then
-	if toBool(cond) {
+	if b {
 		a, err := n.exp1.Eval(env)
 		if err != nil {
 			return nil, err
@@ -349,11 +352,11 @@ func (n conditionalNode) Eval(env interface{}) (interface{}, error) {
 		return a, nil
 	}
 	// Else
-	b, err := n.exp2.Eval(env)
+	v, err := n.exp2.Eval(env)
 	if err != nil {
 		return nil, err
 	}
-	return b, nil
+	return v, nil
 
 }
 

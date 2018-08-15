@@ -3,14 +3,21 @@ package expr
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 )
 
-func isBool(val interface{}) bool {
+func isBool1(val interface{}) bool {
 	return val != nil && reflect.TypeOf(val).Kind() == reflect.Bool
 }
 
-func toBool(val interface{}) bool {
-	return reflect.ValueOf(val).Bool()
+func toBool(val interface{}) (bool, bool) {
+	if b, ok := val.(bool); ok {
+		return b, true
+	}
+	if v, err := cast(val); err == nil {
+		return v > 0, true
+	}
+	return false, false
 }
 
 func isText(val interface{}) bool {
@@ -22,15 +29,13 @@ func toText(val interface{}) string {
 }
 
 func equal(left, right interface{}) bool {
-	if isNumber(left) && canBeNumber(right) {
-		right, _ := cast(right)
-		return left == right
-	} else if canBeNumber(left) && isNumber(right) {
-		left, _ := cast(left)
-		return left == right
-	} else {
-		return reflect.DeepEqual(left, right)
+	if l, err := cast(left); err == nil {
+		if r, err := cast(right); err == nil {
+			return l == r
+		}
+		return false
 	}
+	return reflect.DeepEqual(left, right)
 }
 
 func isNumber(val interface{}) bool {
@@ -38,18 +43,46 @@ func isNumber(val interface{}) bool {
 }
 
 func cast(v interface{}) (float64, error) {
-	if v != nil {
-		switch reflect.TypeOf(v).Kind() {
-		case reflect.Float32, reflect.Float64:
-			return v.(float64), nil
-
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return float64(reflect.ValueOf(v).Int()), nil
-
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return float64(reflect.ValueOf(v).Uint()), nil // TODO: Check if uint64 fits into float64.
-		}
+	switch t := v.(type) {
+	case float32:
+		return float64(t), nil
+	case float64:
+		return t, nil
+	case int:
+		return float64(t), nil
+	case int8:
+		return float64(t), nil
+	case int16:
+		return float64(t), nil
+	case int32:
+		return float64(t), nil
+	case int64:
+		return float64(t), nil
+	case uint:
+		return float64(t), nil
+	case uint8:
+		return float64(t), nil
+	case uint16:
+		return float64(t), nil
+	case uint32:
+		return float64(t), nil
+	case uint64:
+		return float64(t), nil
+	case string:
+		return strconv.ParseFloat(t, 64)
 	}
+	//	if v != nil {
+	//		switch reflect.TypeOf(v).Kind() {
+	//		case reflect.Float32, reflect.Float64:
+	//			return v.(float64), nil
+
+	//		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+	//			return float64(reflect.ValueOf(v).Int()), nil
+
+	//		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	//			return float64(reflect.ValueOf(v).Uint()), nil // TODO: Check if uint64 fits into float64.
+	//		}
+	//	}
 	return 0, fmt.Errorf("can't cast %T to float64", v)
 }
 
@@ -60,8 +93,45 @@ func canBeNumber(v interface{}) bool {
 	return false
 }
 
-func extract(from interface{}, it interface{}) (interface{}, error) {
+func extract(from interface{}, it string) (interface{}, error) {
 	if from != nil {
+		if m, ok := from.(map[string]interface{}); ok {
+			if v, ok := m[it]; ok {
+				return v, nil
+			}
+			return nil, fmt.Errorf("can't get %q from %T", it, from)
+		}
+		switch reflect.TypeOf(from).Kind() {
+		case reflect.Map:
+			value := reflect.ValueOf(from).MapIndex(reflect.ValueOf(it))
+			if value.IsValid() && value.CanInterface() {
+				return value.Interface(), nil
+			}
+		case reflect.Struct:
+			value := reflect.ValueOf(from).FieldByName(it)
+			if value.IsValid() && value.CanInterface() {
+				return value.Interface(), nil
+			}
+		case reflect.Ptr:
+			value := reflect.ValueOf(from).Elem()
+			if value.IsValid() && value.CanInterface() {
+				return extract(value.Interface(), it)
+			}
+		}
+	}
+	return nil, fmt.Errorf("can't get %q from %T", it, from)
+}
+
+func extractIt(from interface{}, it interface{}) (interface{}, error) {
+	if from != nil {
+		if m, ok := from.(map[string]interface{}); ok {
+			if k, ok := it.(string); ok {
+				if v, ok := m[k]; ok {
+					return v, nil
+				}
+				return nil, fmt.Errorf("can't get %q from %T", it, from)
+			}
+		}
 		switch reflect.TypeOf(from).Kind() {
 		case reflect.Array, reflect.Slice, reflect.String:
 			i, err := cast(it)
@@ -86,7 +156,7 @@ func extract(from interface{}, it interface{}) (interface{}, error) {
 		case reflect.Ptr:
 			value := reflect.ValueOf(from).Elem()
 			if value.IsValid() && value.CanInterface() {
-				return extract(value.Interface(), it)
+				return extractIt(value.Interface(), it)
 			}
 		}
 	}
@@ -131,7 +201,7 @@ func count(node Node, array interface{}) (float64, error) {
 func call(name string, fn interface{}, arguments []Node, env interface{}) (interface{}, error) {
 	in := make([]reflect.Value, 0)
 	for _, arg := range arguments {
-		a, err := Run(arg, env)
+		a, err := arg.Eval(env)
 		if err != nil {
 			return nil, err
 		}
