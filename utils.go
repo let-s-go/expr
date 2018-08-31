@@ -96,10 +96,7 @@ func canBeNumber(v interface{}) bool {
 func extract(from interface{}, it string) (interface{}, error) {
 	if from != nil {
 		if m, ok := from.(map[string]interface{}); ok {
-			if v, ok := m[it]; ok {
-				return v, nil
-			}
-			return nil, fmt.Errorf("can't get %q from %T", it, from)
+			return m[it], nil
 		}
 		switch reflect.TypeOf(from).Kind() {
 		case reflect.Map:
@@ -107,11 +104,13 @@ func extract(from interface{}, it string) (interface{}, error) {
 			if value.IsValid() && value.CanInterface() {
 				return value.Interface(), nil
 			}
+			return nil, nil
 		case reflect.Struct:
 			value := reflect.ValueOf(from).FieldByName(it)
 			if value.IsValid() && value.CanInterface() {
 				return value.Interface(), nil
 			}
+			return nil, nil
 		case reflect.Ptr:
 			value := reflect.ValueOf(from).Elem()
 			if value.IsValid() && value.CanInterface() {
@@ -126,10 +125,7 @@ func extractIt(from interface{}, it interface{}) (interface{}, error) {
 	if from != nil {
 		if m, ok := from.(map[string]interface{}); ok {
 			if k, ok := it.(string); ok {
-				if v, ok := m[k]; ok {
-					return v, nil
-				}
-				return nil, fmt.Errorf("can't get %q from %T", it, from)
+				return m[k], nil
 			}
 		}
 		switch reflect.TypeOf(from).Kind() {
@@ -148,11 +144,13 @@ func extractIt(from interface{}, it interface{}) (interface{}, error) {
 			if value.IsValid() && value.CanInterface() {
 				return value.Interface(), nil
 			}
+			return nil, nil
 		case reflect.Struct:
 			value := reflect.ValueOf(from).FieldByName(reflect.ValueOf(it).String())
 			if value.IsValid() && value.CanInterface() {
 				return value.Interface(), nil
 			}
+			return nil, nil
 		case reflect.Ptr:
 			value := reflect.ValueOf(from).Elem()
 			if value.IsValid() && value.CanInterface() {
