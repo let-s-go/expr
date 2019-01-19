@@ -295,7 +295,7 @@ func (n methodNode) Eval(env interface{}) (interface{}, error) {
 		return nil, err
 	}
 
-	method, err := extract(v, n.method)
+	method, err := extract(v, n.method, true)
 	if err != nil {
 		return nil, err
 	}

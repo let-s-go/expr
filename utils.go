@@ -10,6 +10,12 @@ func isBool1(val interface{}) bool {
 	return val != nil && reflect.TypeOf(val).Kind() == reflect.Bool
 }
 
+func canBeTrue(val interface{}) bool {
+	switch {
+	}
+	return false
+}
+
 func toBool(val interface{}) (bool, bool) {
 	if b, ok := val.(bool); ok {
 		return b, true
@@ -93,7 +99,7 @@ func canBeNumber(v interface{}) bool {
 	return false
 }
 
-func extract(from interface{}, it string) (interface{}, error) {
+func extract(from interface{}, it string, isMethod ...bool) (interface{}, error) {
 	if from != nil {
 		if m, ok := from.(map[string]interface{}); ok {
 			return m[it], nil
@@ -116,9 +122,17 @@ func extract(from interface{}, it string) (interface{}, error) {
 			if value.IsValid() && value.CanInterface() {
 				return extract(value.Interface(), it)
 			}
+		default:
+			if len(isMethod) == 1 && isMethod[0] {
+				method := reflect.ValueOf(from).MethodByName(it)
+				if method.IsValid() && method.CanInterface() {
+					return method.Interface(), nil
+				}
+				return nil, nil
+			}
 		}
 	}
-	return nil, fmt.Errorf("can't get %q from %T", it, from)
+	return nil, fmt.Errorf("can't get %v from %T", it, from)
 }
 
 func extractIt(from interface{}, it interface{}) (interface{}, error) {
