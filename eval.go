@@ -155,10 +155,11 @@ func (n binaryNode) Eval(env interface{}) (interface{}, error) {
 		return !ok, nil
 
 	case "~":
-		if isText(left) && isText(right) {
-			return toText(left) + toText(right), nil
-		}
-		return nil, fmt.Errorf("operator ~ not defined on (%T, %T)", left, right)
+		// if isText(left) && isText(right) {
+		// 	return toText(left) + toText(right), nil
+		// }
+		// return nil, fmt.Errorf("operator ~ not defined on (%T, %T)", left, right)
+		return fmt.Sprint(left) + fmt.Sprint(right), nil
 	}
 
 	// Next goes operators on numbers
